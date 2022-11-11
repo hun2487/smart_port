@@ -1,7 +1,7 @@
 import argparse
 #import estimator
 from multiprocessing import Process
-import time
+import datetime
 
 import os
 # limit the number of cpus used by high performance libraries
@@ -18,15 +18,25 @@ from pathlib import Path
 import torch
 import torch.backends.cudnn as cudnn
 
+import pandas as pd
+from sqlalchemy import create_engine
+from PIL import Image
+import base64
+from io import BytesIO
 
 import requests
 import json
+
+engine = create_engine('mysql+pymysql://admin:admin@3.35.222.169:3306/smart_port', echo=True)
+buffer = BytesIO()
 
 url = "http://3.35.222.169:5000/test"
 
 headers = {
     "Content-Type": "application/json"
 }
+
+#now = datetime.now()
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # yolov5 strongsort root directory
@@ -264,9 +274,21 @@ def run(
                 data = json.dumps(temp)
 
                 response = requests.post(url, headers=headers, data=data)
-                
+                a = response.json()
                 print('response:',response)
-                #print(b.get('result'))
+                print(a.get('result'))
+
+                if a.get('result') == False:
+                    cv2.imwrite('C:/Users/admin/Desktop/project/선박 안전 운항 보조 시스템/s_cap/capture.jpg', im0)
+                    im = Image.open('C:/Users/admin/Desktop/project/선박 안전 운항 보조 시스템/s_cap/capture.jpg')
+                    im.save(buffer, format='jpeg')
+                    img_str = base64.b64encode(buffer.getvalue())
+                    #print(img_str)
+
+                    img_df = pd.DataFrame({'ship_image':[img_str],'time':[datetime.now()]})
+                    img_df.to_sql('w_log', con=engine, if_exists='append',index=False)
+                
+
 
             else:
                 temp = {
@@ -380,7 +402,6 @@ def parse_opt():
 def main(opt):
     check_requirements(requirements=ROOT / 'requirements.txt', exclude=('tensorboard', 'thop'))
     run(**vars(opt))
-    time.sleep(0.001)
 
     
 
@@ -410,6 +431,19 @@ def count_obj(box, w,h,id):
                 totalobj.append(num_cls)
                 lcount += 1
                 data.append(id)
+
+        if id in rightobj and id in totalobj:
+            if int(box[0] + (box[2] - box[0])/2) > (int(w/2)-240): # 왼쪽에서 나타난 배를 leftobj 리스트에 추가
+                rightobj.remove(num_cls)
+                totalobj.remove(num_cls)
+                print('오른쪽 list 삭제: ', rightobj)
+                print('토탈 삭제', totalobj)
+
+        if id in leftobj and id in totalobj:
+            if int(box[0] + (box[2] - box[0])/2) < (int(w/2)+240): # 오른쪽에서 나타난 배를 rightobj 리스트에 추가
+                leftobj.remove(num_cls)
+                print('왼쪽 list 삭제', leftobj)
+                print('토탈 삭제', totalobj)
         
 if __name__ == "__main__":
     opt = parse_opt()
