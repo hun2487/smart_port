@@ -7,7 +7,7 @@ import cv2
 import mediapipe as mp
 import numpy as np
 
-import datetime
+from datetime import datetime 
 
 import requests
 import json
@@ -22,6 +22,8 @@ import winsound
 
 mp_face_mesh = mp.solutions.face_mesh
 face_mesh = mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence=0.5)
+
+date = datetime.today().strftime('%Y-%m-%d %H:%M')
 
 url = "http://3.35.222.169:5000/test2" 
 
@@ -106,6 +108,7 @@ class ObjectDetection:
         print('response',response)
 
         b = response.json()
+        print(b.get('result'))
         if b.get('result') == False:
             winsound.Beep(
             frequency=1000,  # Hz
@@ -116,7 +119,9 @@ class ObjectDetection:
             im.save(buffer, format='jpeg')
             img_str = base64.b64encode(buffer.getvalue())
             #print(img_str)
-            img_df = pd.DataFrame({'person_image':[img_str],'time':[datetime.now()]})
+            #query = 'log_time==log_time and person_image is null'
+            img_df = pd.DataFrame({'person_image':[img_str],'log_time':[date]})
+            #img_df = img_df.query()
             img_df.to_sql('w_log', con=engine, if_exists='append',index=False)
 
         return image

@@ -1,7 +1,7 @@
 import argparse
 #import estimator
 from multiprocessing import Process
-import datetime
+from datetime import datetime 
 
 import os
 # limit the number of cpus used by high performance libraries
@@ -279,14 +279,19 @@ def run(
                 print(a.get('result'))
 
                 if a.get('result') == False:
+                    query = 'log_time==log_time and ship_image is null'
                     cv2.imwrite('C:/Users/admin/Desktop/project/선박 안전 운항 보조 시스템/s_cap/capture.jpg', im0)
                     im = Image.open('C:/Users/admin/Desktop/project/선박 안전 운항 보조 시스템/s_cap/capture.jpg')
                     im.save(buffer, format='jpeg')
+                    date = datetime.today().strftime('%Y-%m-%d %H:%M') #오늘 날짜 + 시간
                     img_str = base64.b64encode(buffer.getvalue())
                     #print(img_str)
 
-                    img_df = pd.DataFrame({'ship_image':[img_str],'time':[datetime.now()]})
-                    img_df.to_sql('w_log', con=engine, if_exists='append',index=False)
+                    img_df = pd.DataFrame({'ship_image':[img_str],'log_time':[date]})
+                    img_df = img_df.query(query)
+                    a = img_df.to_sql('w_log', con=engine, if_exists='append',index=False)
+                    a
+                    print(a)
                 
 
 
