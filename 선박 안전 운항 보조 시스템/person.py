@@ -1,29 +1,24 @@
 import torch
 import numpy as np
 import cv2
-
 import math
 import cv2
 import mediapipe as mp
 import numpy as np
-
 from datetime import datetime 
-
 import requests
 import json
-
-import pandas as pd
-from sqlalchemy import create_engine
 from PIL import Image
 import base64
 from io import BytesIO
-
 import winsound
+import pymysql
 
 mp_face_mesh = mp.solutions.face_mesh
 face_mesh = mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence=0.5)
 
-date = datetime.today().strftime('%Y-%m-%d %H:%M')
+conn = pymysql.connect(host='3.35.222.169',port=3306,password='admin' ,user='admin', db='smart_port') #db연결
+Cursor = conn.cursor()
 
 url = "http://3.35.222.169:5000/test2" 
 
@@ -31,8 +26,6 @@ headers = {
     "Content-Type": "application/json" #json타입 헤더
 }
 
-engine = create_engine('mysql+pymysql://admin:admin@3.35.222.169:3306/smart_port', echo=False) #mysql
-img_df = pd.read_sql(sql='select * from w_log', con=engine)
 buffer = BytesIO()
 
 degree = 0
@@ -55,10 +48,8 @@ class ObjectDetection:
     
 
     def load_model(self):
-        model = torch.hub.load('ultralytics/yolov5','yolov5s', pretrained=True)
-       
+        model = torch.hub.load('ultralytics/yolov5','yolov5s', pretrained=True) #yolov5 기본모델
         return model
-
 
     def score_frame(self, image):
         self.model.to(self.device)
@@ -68,10 +59,8 @@ class ObjectDetection:
         labels, cord = results.xyxyn[0][:, -1], results.xyxyn[0][:, :-1]
         return labels, cord
 
-
     def class_to_label(self, x):
         return self.classes[int(x)]
-
 
     def plot_boxes(self, results, image):
         labels, cord = results
@@ -89,7 +78,6 @@ class ObjectDetection:
                     cv2.putText(image, self.class_to_label(labels[i]), (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 0.9, bgr, 2)
         cv2.putText(image, f'person: {count}', (20,90), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0,255,0), 2)
         if count == 0 : 
-                value = "근무지 이탈!!!!"
                 temp = {
                     'p_count' : 0,
                     'degree': 0
@@ -107,23 +95,24 @@ class ObjectDetection:
         response = requests.post(url, headers=headers, data=data)
         print('response',response)
 
-        b = response.json()
+        b = response.json() #json으로 return값 받아오기
         print(b.get('result'))
+        
         if b.get('result') == False:
-            winsound.Beep(
-            frequency=1000,  # Hz
-            duration=100  # milliseconds
-            )
-            cv2.imwrite('C:/Users/admin/Desktop/project/선박 안전 운항 보조 시스템/p_cap/capture.jpg', image)
-            im = Image.open('C:/Users/admin/Desktop/project/선박 안전 운항 보조 시스템/p_cap/capture.jpg')
-            im.save(buffer, format='jpeg')
-            img_str = base64.b64encode(buffer.getvalue())
-            #print(img_str)
-            #query = 'log_time==log_time and person_image is null'
-            img_df = pd.DataFrame({'person_image':[img_str],'log_time':[date]})
-            #img_df = img_df.query()
-            img_df.to_sql('w_log', con=engine, if_exists='append',index=False)
-
+                date = datetime.today().strftime('%Y-%m-%d %H:%M:00') #현재 날짜
+                winsound.Beep(
+                frequency=1000,  # Hz
+                duration=100  # milliseconds
+                )
+                cv2.imwrite('C:/Users/admin/Desktop/project/선박 안전 운항 보조 시스템/p_cap/capture.jpg', image) #이미지 캡쳐
+                im = Image.open('C:/Users/admin/Desktop/project/선박 안전 운항 보조 시스템/p_cap/capture.jpg')
+                im.save(buffer, format='jpeg') 
+                img_str = base64.b64encode(buffer.getvalue()) #이미지 인코딩
+                query = 'INSERT INTO w_log (log_time, person_image) SELECT %s, %s FROM DUAL WHERE NOT exists ( SELECT log_time FROM w_log WHERE log_time=%s)'
+                #False일 때 분당 이미지 insert
+                values = [(date, img_str, date)]
+                Cursor.executemany(query,values)
+                conn.commit()
         return image
 
 
@@ -200,6 +189,7 @@ class ObjectDetection:
             cv2.imshow("img", image)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
+                conn.close()
                 break
 
 detection = ObjectDetection()

@@ -1,5 +1,4 @@
 import argparse
-#import estimator
 from multiprocessing import Process
 from datetime import datetime 
 
@@ -13,22 +12,21 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 import sys
-import numpy as np
 from pathlib import Path
 import torch
 import torch.backends.cudnn as cudnn
-
-import pandas as pd
 from sqlalchemy import create_engine
 from PIL import Image
 import base64
 from io import BytesIO
-
 import requests
 import json
+import pymysql
 
-engine = create_engine('mysql+pymysql://admin:admin@3.35.222.169:3306/smart_port', echo=True)
 buffer = BytesIO()
+conn = pymysql.connect(host='3.35.222.169',port=3306,password='admin', user='admin', db='smart_port') #db연결
+
+Cursor = conn.cursor()
 
 url = "http://3.35.222.169:5000/test"
 
@@ -96,7 +94,7 @@ def run(
         augment=False,  # augmented inference
         visualize=False,  # visualize features
         update=False,  # update all models
-        project=ROOT / 'runs/track',  # save results to project/name
+        #project=ROOT / 'runs/track',  # save results to project/name
         name='exp',  # save results to project/name
         exist_ok=False,  # existing project/name ok, do not increment
         line_thickness=2,  # bounding box thickness (pixels)
@@ -124,8 +122,8 @@ def run(
     else:  # multiple models after --yolo_weights
         exp_name = 'ensemble'
     exp_name = name if name else exp_name + "_" + strong_sort_weights.stem
-    save_dir = increment_path(Path(project) / exp_name, exist_ok=exist_ok)  # increment run
-    (save_dir / 'tracks' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
+    #save_dir = increment_path(Path(project) / exp_name, exist_ok=exist_ok)  # increment run
+    #(save_dir / 'tracks' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
 
     # Load model
     if eval:
@@ -173,7 +171,7 @@ def run(
         dt[0] += t2 - t1
 
         # Inference
-        visualize = increment_path(save_dir / Path(path[0]).stem, mkdir=True) if visualize else False
+        #visualize = increment_path(save_dir / Path(path[0]).stem, mkdir=True) if visualize else False
         pred = model(im, augment=augment, visualize=visualize)
         t3 = time_sync()
         dt[1] += t3 - t2
@@ -190,28 +188,27 @@ def run(
                 p = Path(p)  # to Path
                 s += f'{i}: '
                 txt_file_name = p.name
-                save_path = str(save_dir / p.name)  # im.jpg, vid.mp4, ...
+                #save_path = str(save_dir / p.name)  # im.jpg, vid.mp4, ...
             else:
                 p, im0, _ = path, im0s.copy(), getattr(dataset, 'frame', 0)
                 p = Path(p)  # to Path
                 # video file
                 if source.endswith(VID_FORMATS):
                     txt_file_name = p.stem
-                    save_path = str(save_dir / p.name)  # im.jpg, vid.mp4, ...
+                    #save_path = str(save_dir / p.name)  # im.jpg, vid.mp4, ...
                 # folder with imgs
                 else:
                     txt_file_name = p.parent.name  # get folder name containing current img
-                    save_path = str(save_dir / p.parent.name)  # im.jpg, vid.mp4, ...
+                    #save_path = str(save_dir / p.parent.name)  # im.jpg, vid.mp4, ...
             curr_frames[i] = im0
 
-            txt_path = str(save_dir / 'tracks' / txt_file_name)  # im.txt
+            #txt_path = str(save_dir / 'tracks' / txt_file_name)  # im.txt
             s += '%gx%g ' % im.shape[2:]  # print string
             imc = im0.copy() if save_crop else im0  # for save_crop
 
             annotator = Annotator(im0, line_width=line_thickness, pil=not ascii)
-            h, w = im0.shape[0], im0.shape[1] ###asd
-            #print(im0.shape)
-
+            h, w = im0.shape[0], im0.shape[1] #이미지 높이, 너비
+            
             #if cfg.STRONGSORT.ECC:  # camera motion compensation
             #    strongsort_list[i].tracker.camera_update(prev_frames[i], curr_frames[i])
 
@@ -238,14 +235,10 @@ def run(
                         bboxes = output[0:4]
                         id = output[4]
                         cls = output[5]
-
                         num_cls = int(id)
 
-                        #count
                         count_obj(bboxes, w,h,id)
-                        #print(bboxes)
-                        #print(cls)
-
+                        
                         if save_txt:
                             # to MOT format
                             bbox_left = output[0]
@@ -265,9 +258,7 @@ def run(
                             annotator.box_label(bboxes, label, color=colors(c, True))
                             if save_crop:
                                 txt_file_name = txt_file_name if (isinstance(path, list) and len(path) > 1) else ''
-                                save_one_box(bboxes, imc, file=save_dir / 'crops' / txt_file_name / names[c] / f'{id}' / f'{p.stem}.jpg', BGR=True)
 
-                #LOGGER.info(f'{s}Done. yolo:({t3 - t2:.3f}s), {tracking_method}:({t5 - t4:.3f}s)')
                 temp = {
                     'count' : int(s[11])            
                 }
@@ -279,51 +270,44 @@ def run(
                 print(a.get('result'))
 
                 if a.get('result') == False:
-                    query = 'log_time==log_time and ship_image is null'
+
+                    date = datetime.today().strftime('%Y-%m-%d_%H:%M:00') #오늘 날짜 + 시간
+                        
                     cv2.imwrite('C:/Users/admin/Desktop/project/선박 안전 운항 보조 시스템/s_cap/capture.jpg', im0)
                     im = Image.open('C:/Users/admin/Desktop/project/선박 안전 운항 보조 시스템/s_cap/capture.jpg')
                     im.save(buffer, format='jpeg')
-                    date = datetime.today().strftime('%Y-%m-%d %H:%M') #오늘 날짜 + 시간
+                        
                     img_str = base64.b64encode(buffer.getvalue())
-                    #print(img_str)
-
-                    img_df = pd.DataFrame({'ship_image':[img_str],'log_time':[date]})
-                    img_df = img_df.query(query)
-                    a = img_df.to_sql('w_log', con=engine, if_exists='append',index=False)
-                    a
-                    print(a)
-                
-
-
+                    query = 'UPDATE w_log SET ship_image=%s where log_time=%s'
+                    values = [(img_str,date)]
+                    Cursor.executemany(query,values)
+                    conn.commit()
             else:
                 temp = {
                     'count' : 0           
                 }
                 data = json.dumps(temp)
                 response = requests.post(url, headers=headers, data=data)
-                #print(b.get('result'))
-                
                 
             # Stream results
             im0 = annotator.result()
             if show_vid:
-                #estimator.head.head_call()
                 color = (255,0,0)
                 fontScale = 0.5
                 font = cv2.FONT_HERSHEY_SIMPLEX
-                org = (158,150)
                 thickness = 2
-                start_point_1 = (int(w/2),h)
+                start_point_1 = (int(w/2),h) #중
                 end_point_1 = (int(w/2),0)
 
-                start_point_2 = (int(w/2)+240,0)
+                start_point_2 = (int(w/2)+240,0) #우
                 end_point_2 = (int(w/2)+240,h)
                 
-                start_point_3 = (int(w/2)-240,0)
+                start_point_3 = (int(w/2)-240,0) #좌
                 end_point_3 = (int(w/2)-240,h)
-                cv2.line(im0, start_point_1, end_point_1, color, thickness)
-                cv2.line(im0, start_point_2, end_point_2, color, thickness)
-                cv2.line(im0, start_point_3, end_point_3, color, thickness)
+
+                cv2.line(im0, start_point_1, end_point_1, color, thickness) #중측선
+                cv2.line(im0, start_point_2, end_point_2, color, thickness) #우앙선
+                cv2.line(im0, start_point_3, end_point_3, color, thickness) #좌측선
                  
                 cv2.putText(im0, 'left->right: ' + str(rcount), (100,100) , font, fontScale,color,thickness, cv2.LINE_AA)
                 cv2.putText(im0, 'right->count: ' + str(lcount),(400,100) , font, fontScale,color,thickness, cv2.LINE_AA)
@@ -334,7 +318,6 @@ def run(
 
             # Save results (image with detections)
             
-
             if save_vid:
                 if vid_path[i] != save_path:  # new video
                     vid_path[i] = save_path
@@ -351,25 +334,26 @@ def run(
                 vid_writer[i].write(im0)
 
             prev_frames[i] = curr_frames[i]
-            #print(id)
-            #print(h+10)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+             conn.close()
+             break
 
     # Print results
     t = tuple(x / seen * 1E3 for x in dt)  # speeds per image
     LOGGER.info(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS, %.1fms strong sort update per image at shape {(1, 3, *imgsz)}' % t)
-    if save_txt or save_vid:
-        s = f"\n{len(list(save_dir.glob('tracks/*.txt')))} tracks saved to {save_dir / 'tracks'}" if save_txt else ''
-        LOGGER.info(f"Results saved to {colorstr('bold', save_dir)}{s}")
     if update:
         strip_optimizer(yolo_weights)  # update model (to fix SourceChangeWarning)
 
 
+    
+
+
 def parse_opt():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--yolo-weights', nargs='+', type=Path, default=WEIGHTS / 'yolov5m.pt', help='model.pt path(s)')
+    parser.add_argument('--yolo-weights', nargs='+', type=Path, default=WEIGHTS / 'best.pt', help='model.pt path(s)')
     parser.add_argument('--appearance-descriptor-weights', type=Path, default=WEIGHTS / 'osnet_x0_25_msmt17.pt')
     parser.add_argument('--tracking-method', type=str, default='strongsort', help='strongsort, ocsort, bytetrack')
-    parser.add_argument('--source', type=str, default='0', help='file/dir/URL/glob, 0 for webcam')  
+    parser.add_argument('--source', type=str, default='0', help='file/dir/URL/glob, 0 for webcam')
     parser.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int, default=[640], help='inference size h,w')
     parser.add_argument('--conf-thres', type=float, default=0.5, help='confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.5, help='NMS IoU threshold')
@@ -381,13 +365,11 @@ def parse_opt():
     parser.add_argument('--save-crop', action='store_true', help='save cropped prediction boxes')
     parser.add_argument('--save-vid', action='store_true', help='save video tracking results')
     parser.add_argument('--nosave', action='store_true', help='do not save images/videos')
-    # class 0 is person, 1 is bycicle, 2 is car... 79 is oven
     parser.add_argument('--classes', nargs='+', type=int, help='filter by class: --classes 0, or --classes 0 2 3')
     parser.add_argument('--agnostic-nms', action='store_true', help='class-agnostic NMS')
     parser.add_argument('--augment', action='store_true', help='augmented inference')
     parser.add_argument('--visualize', action='store_true', help='visualize features')
     parser.add_argument('--update', action='store_true', help='update all models')
-    parser.add_argument('--project', default=ROOT / 'runs/track', help='save results to project/name')
     parser.add_argument('--name', default='exp', help='save results to project/name')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
     parser.add_argument('--line-thickness', default=2, type=int, help='bounding box thickness (pixels)')
@@ -423,7 +405,7 @@ def count_obj(box, w,h,id):
                 rightobj.append(num_cls)
                 print('오른쪽', rightobj)
 
-        #center_coordinates = (int(box[0] + (box[2] - box[0])/2), int(box[1] + (box[3]-box[1])/2)) 
+        #center_coordinates = (int(box[0] + (box[2] - box[0])/2), int(box[1] + (box[3]-box[1])/2)) ////센터좌표값
 
         if int(box[0] + (box[2] - box[0])/2) > (int(w/2)-240) and int(box[0] + (box[2] - box[0])/2) < int(w/2):
             if id not in totalobj:
@@ -454,3 +436,4 @@ if __name__ == "__main__":
     opt = parse_opt()
     b = Process(target = main(opt))
     b.start()
+    conn.close()
