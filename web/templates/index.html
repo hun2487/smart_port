@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+	<style>
+		.imgg {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+		}
+
+		@font-face {
+			font-family: 'GangwonEduPowerExtraBoldA';
+			src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2201-2@1.0/GangwonEduPowerExtraBoldA.woff') format('woff');
+			font-weight: normal;
+			font-style: normal;
+		}
+	</style>
+
+  	<title>선박안전보조시스템</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+	<link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
+
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+	
+	<link rel="stylesheet" href="../static/css/style.css">
+
+	</head>
+
+	<body class="img js-fullheight box01" style="background-image: url(../static/images/ship.jpg);">
+	<section class="ftco-section">
+		<div class="container">
+			<div class="row justify-content-center">
+				<div class="col-md-6 text-center mb-5">
+					<h1 class="heading-section">선박안전운항보조시스템</h1>
+				</div>
+			</div>
+			<div class="row justify-content-left">
+				<div class="col-md-6 col-lg-4">
+					<div class="login-wrap p-0">			
+						<form action="#" class="signin-form">
+							<section class="ftco-section">
+								<div class="container">
+									<div class="row">
+										<div class="col-md-12">
+											<div class="table-wrap">
+												<form action ="./image" method="POST">
+												<table class="table">
+													<thead class="thead-primary">
+													<tr>
+														<th>#</th>
+														<th><center>Ship Image</center></th>
+													</tr>
+													</thead>
+
+													<tbody>
+														{%for i in data_list%}
+													<tr>
+														<td> {{ i[0] }} </td>
+														<td>
+															<a href="/image/{{ i[0] }}" style="color: white">{{ i[1] }}</a>
+														</td>
+													</tr>
+													{% endfor %}
+													</tbody>
+												</table>
+												</form>
+											</div>
+										</div>
+									</div>
+								</div>
+							</section>
+						</form>
+					</div>
+				</div>
+
+				<div class = "imgg">
+					<form method="post" enctype="multipart/form-data">
+						<div class = "row">	
+							<img src= "data:image/jpeg;base64,{{ ship_image }}" class="img-thumbnail; rounded float-start;" 
+								style= "top:50%; padding-top:3px; height:240px; width: 320px;" alt="...">
+							<img src="data:image/jpeg;base64,{{ person_image }}" class="img-thumbnail; rounded float-end;" 
+								style= "padding:3px; height:240px; width: 320px;" alt="...">
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</section>
+
+  <script src="../static/js/jquery.min.js"></script>
+  <script src="../static/js/popper.js"></script>
+  <script src="../static/js/bootstrap.min.js"></script>
+  <script src="../static/js/main.js"></script>
+
+	</body>
+</html>
+
