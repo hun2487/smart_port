@@ -28,13 +28,15 @@ conn = pymysql.connect(host='3.35.222.169',port=3306,password='admin', user='adm
 
 Cursor = conn.cursor()
 
-url = "http://3.35.222.169:5000/test"
+url = "http://3.35.222.169:5000/ship"
 
 headers = {
     "Content-Type": "application/json"
 }
 
 #now = datetime.now()
+
+center_coordinates = 0
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # yolov5 strongsort root directory
@@ -292,6 +294,7 @@ def run(
             # Stream results
             im0 = annotator.result()
             if show_vid:
+                
                 color = (255,0,0)
                 fontScale = 0.5
                 font = cv2.FONT_HERSHEY_SIMPLEX
@@ -308,11 +311,18 @@ def run(
                 cv2.line(im0, start_point_1, end_point_1, color, thickness) #중측선
                 cv2.line(im0, start_point_2, end_point_2, color, thickness) #우앙선
                 cv2.line(im0, start_point_3, end_point_3, color, thickness) #좌측선
-                 
-                cv2.putText(im0, 'left->right: ' + str(rcount), (100,100) , font, fontScale,color,thickness, cv2.LINE_AA)
-                cv2.putText(im0, 'right->count: ' + str(lcount),(400,100) , font, fontScale,color,thickness, cv2.LINE_AA)
-                
 
+               
+                
+                if lcount == 1:
+                    cv2.putText(im0, 'left to right', (100,100) , font, fontScale,(0,30,255),thickness, cv2.LINE_AA)
+                
+                if rcount == 1:
+                    cv2.putText(im0, 'right to left',(400,100) , font, fontScale,(0,30,255),thickness, cv2.LINE_AA)
+                elif rcount == 0:
+                    cv2.putText(im0, ' ',(400,100) , font, fontScale,(0,30,255),thickness, cv2.LINE_AA)
+
+                print(center_coordinates, int(w/2), rcount)
                 cv2.imshow(str(p), im0)
                 cv2.waitKey(1)  # 1 millisecond
 
@@ -393,31 +403,40 @@ def main(opt):
     
 
 def count_obj(box, w,h,id):
-        global rcount, lcount,data, num_cls
+        global rcount, lcount,data, num_cls, center_coordinates
         id = int(id)
-        if int(box[0] + (box[2] - box[0])/2) < (int(w/2)-240): # 왼쪽에서 나타난 배를 leftobj 리스트에 추가
-            if id not in leftobj:
-                leftobj.append(num_cls)
-                print('왼쪽',leftobj)
 
-        if int(box[0] + (box[2] - box[0])/2) > (int(w/2)+240): # 오른쪽에서 나타난 배를 rightobj 리스트에 추가
-            if id not in rightobj:
-                rightobj.append(num_cls)
-                print('오른쪽', rightobj)
+        # if int(box[0] + (box[2] - box[0])/2) < (int(w/2)-240): # 왼쪽에서 나타난 배를 leftobj 리스트에 추가
+        #     if id not in leftobj:
+        #         leftobj.append(num_cls)
+        #         print('왼쪽',leftobj)
 
-        #center_coordinates = (int(box[0] + (box[2] - box[0])/2), int(box[1] + (box[3]-box[1])/2)) ////센터좌표값
+        # if int(box[0] + (box[2] - box[0])/2) > (int(w/2)+240): # 오른쪽에서 나타난 배를 rightobj 리스트에 추가
+        #     if id not in rightobj:
+        #         rightobj.append(num_cls)
+        #         print('오른쪽', rightobj)
+
+        center_coordinates = int(box[0] + (box[2] - box[0])/2) #, int(box[1] + (box[3]-box[1])/2)) ////센터좌표값
 
         if int(box[0] + (box[2] - box[0])/2) > (int(w/2)-240) and int(box[0] + (box[2] - box[0])/2) < int(w/2):
             if id not in totalobj:
                 totalobj.append(num_cls)
-                rcount += 1
+                lcount = 1  
                 data.append(id)
+        else:
+            lcount = 0
+            
         
         if int(box[0] + (box[2] - box[0])/2) < (int(w/2)+240) and int(box[0] + (box[2] - box[0])/2) > int(w/2):
             if id not in totalobj:
                 totalobj.append(num_cls)
-                lcount += 1
+                rcount = 1
                 data.append(id)
+                # if int(box[0] + (box[2] - box[0])/2) < int(w/2):
+                #     rcount = 0
+        else:
+            rcount = 0
+            
 
         if id in rightobj and id in totalobj:
             if int(box[0] + (box[2] - box[0])/2) > (int(w/2)-240): # 왼쪽에서 나타난 배를 leftobj 리스트에 추가

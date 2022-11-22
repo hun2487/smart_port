@@ -20,7 +20,7 @@ face_mesh = mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_con
 conn = pymysql.connect(host='3.35.222.169',port=3306,password='admin' ,user='admin', db='smart_port') #db연결
 Cursor = conn.cursor()
 
-url = "http://3.35.222.169:5000/test2" 
+url = "http://3.35.222.169:5000/person"
 
 headers = {
     "Content-Type": "application/json" #json타입 헤더
@@ -101,8 +101,8 @@ class ObjectDetection:
         if b.get('result') == False:
                 date = datetime.today().strftime('%Y-%m-%d %H:%M:00') #현재 날짜
                 winsound.Beep(
-                frequency=1000,  # Hz
-                duration=100  # milliseconds
+                frequency=3000,  # Hz
+                duration=3000  # milliseconds
                 )
                 cv2.imwrite('C:/Users/admin/Desktop/project/선박 안전 운항 보조 시스템/p_cap/capture.jpg', image) #이미지 캡쳐
                 im = Image.open('C:/Users/admin/Desktop/project/선박 안전 운항 보조 시스템/p_cap/capture.jpg')
