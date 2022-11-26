@@ -46,3 +46,6 @@ python person.py
 AWS - 5000번 포트 개방 후 사용
 
 FLASK와 HTML을 통신하고 PYTHON 파일들과 통신.
+
+## 구현결과
+<img width="80%" src="https://user-images.githubusercontent.com/73980198/204086773-19aee76f-089b-4ce7-be6f-45793a5bf20d.png"/>
